@@ -29,6 +29,7 @@ public class User {
     public String getEmployeePin() { return employeePin; }
 
     // Setters
+    public void setEmployeeID(String employeeID) { this.employeeID = employeeID; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     public void setLastName(String lastName) { this.lastName = lastName; }
     public void setRole(String role) { this.role = role; }
