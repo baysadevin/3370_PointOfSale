@@ -28,6 +28,10 @@ public class User {
     public boolean isActive() { return active; }
     public String getEmployeePin() { return employeePin; }
 
+    public String getFullName() {
+    return firstName + " " + lastName;
+    }
+
     // Setters
     public void setEmployeeID(String employeeID) { this.employeeID = employeeID; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
