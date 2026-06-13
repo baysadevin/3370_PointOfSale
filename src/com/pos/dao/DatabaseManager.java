@@ -78,7 +78,7 @@ public class DatabaseManager {
         "    amount_tendered REAL," +
         "    change_given    REAL," +
         "    created_at      TEXT    DEFAULT (datetime('now'))," +
-        "    FOREIGN KEY (employee_id) REFERENCES users(employee_id)" +
+        "    FOREIGN KEY (employeeID) REFERENCES users(employeeID)" +
         ");";
 
     private static final String CREATE_TRANSACTION_ITEMS =
