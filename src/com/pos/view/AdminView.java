@@ -2,7 +2,6 @@ package com.pos.view;
 
 import com.pos.dao.UserDAO;
 import com.pos.model.User;
-import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -12,7 +11,6 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-import java.util.List;
 
 public class AdminView {
     private final UserDAO userDAO = new UserDAO();
@@ -25,7 +23,7 @@ public class AdminView {
     @SuppressWarnings("unchecked")
     public Node getView() {
         table = new TableView<>(users);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<User, Integer> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getId()).asObject());

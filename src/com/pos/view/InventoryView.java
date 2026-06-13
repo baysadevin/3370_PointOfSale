@@ -11,8 +11,6 @@ import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
-import java.util.List;
-
 public class InventoryView {
     private final ProductDAO productDAO = new ProductDAO();
     private final ObservableList<Product> products = FXCollections.observableArrayList();
@@ -23,7 +21,7 @@ public class InventoryView {
     @SuppressWarnings("unchecked")
     public Node getView() {
         table = new TableView<>(products);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<Product, Integer> idCol = new TableColumn<>("ID");
         idCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getId()).asObject());

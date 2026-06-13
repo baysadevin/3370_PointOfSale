@@ -10,7 +10,6 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-import java.util.List;
 
 public class ReturnView {
     private final User currentUser;
@@ -31,7 +30,7 @@ public class ReturnView {
         txnLabel.setStyle("-fx-font-weight: bold;");
 
         TableView<Transaction> txnTable = new TableView<>(transactions);
-        txnTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        txnTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<Transaction, Integer> idCol = new TableColumn<>("Txn #");
         idCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getId()).asObject());
@@ -54,7 +53,7 @@ public class ReturnView {
         itemLabel.setStyle("-fx-font-weight: bold;");
 
         TableView<TransactionItem> itemTable = new TableView<>(foundItems);
-        itemTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        itemTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         itemTable.setMaxHeight(160);
 
         TableColumn<TransactionItem, Integer> pidCol = new TableColumn<>("Product ID");

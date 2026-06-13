@@ -11,9 +11,7 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-
 import java.util.ArrayList;
-import java.util.List;
 
 public class POSView {
     private final User currentUser;
@@ -40,7 +38,7 @@ public class POSView {
         searchField.textProperty().addListener((obs, old, val) -> filterProducts(val));
 
         productTable = new TableView<>(allProducts);
-        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
         productTable.setPrefWidth(220);
 
         TableColumn<Product, String> pNameCol = new TableColumn<>("Name");
@@ -143,7 +141,7 @@ public class POSView {
     @SuppressWarnings("unchecked")
     private TableView<CartItem> buildCartTable() {
         TableView<CartItem> table = new TableView<>(cartItems);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
 
         TableColumn<CartItem, String> nameCol = new TableColumn<>("Product");
         nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getProduct().getName()));
