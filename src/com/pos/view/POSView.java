@@ -213,7 +213,7 @@ public class POSView {
         }
 
         Transaction t = new Transaction(0, currentUser.getEmployeeID(), "SALE",
-            paymentCombo.getValue(), subtotal, tax, total, tendered, change, "");
+            paymentCombo.getValue(), subtotal, tax, total, tendered, change, "", false);
 
         int id = transactionDAO.saveSale(t, new ArrayList<>(cartItems));
         if (id > 0) {

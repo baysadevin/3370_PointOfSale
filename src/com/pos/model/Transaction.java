@@ -11,10 +11,11 @@ public class Transaction {
     private double amountTendered;
     private double changeGiven;
     private String createdAt;
+    private boolean returned;
 
     public Transaction(int id, String employeeID, String type, String paymentMethod,
                        double subtotal, double taxAmount, double total,
-                       double amountTendered, double changeGiven, String createdAt) {
+                       double amountTendered, double changeGiven, String createdAt, boolean returned) {
         this.id = id;
         this.employeeID = employeeID;
         this.type = type;
@@ -25,6 +26,7 @@ public class Transaction {
         this.amountTendered = amountTendered;
         this.changeGiven = changeGiven;
         this.createdAt = createdAt;
+        this.returned = returned;
     }
 
     public int getId() { return id; }
@@ -37,6 +39,7 @@ public class Transaction {
     public double getAmountTendered() { return amountTendered; }
     public double getChangeGiven() { return changeGiven; }
     public String getCreatedAt() { return createdAt; }
+    public boolean isReturned() { return returned; }
 
     public void setType(String type) { this.type = type; }
     public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
@@ -45,4 +48,5 @@ public class Transaction {
     public void setTotal(double total) { this.total = total; }
     public void setAmountTendered(double amountTendered) { this.amountTendered = amountTendered; }
     public void setChangeGiven(double changeGiven) { this.changeGiven = changeGiven; }
+    public void setReturned(boolean returned) { this.returned = returned; }
 }

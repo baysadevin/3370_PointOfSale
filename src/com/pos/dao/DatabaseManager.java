@@ -77,6 +77,7 @@ public class DatabaseManager {
         "    total           REAL    NOT NULL," +
         "    amount_tendered REAL," +
         "    change_given    REAL," +
+        "    returned        INTEGER NOT NULL DEFAULT 0," +
         "    created_at      TEXT    DEFAULT (datetime('now'))," +
         "    FOREIGN KEY (employeeID) REFERENCES users(employeeID)" +
         ");";

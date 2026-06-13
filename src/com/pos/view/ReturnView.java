@@ -1,9 +1,7 @@
 package com.pos.view;
 
-import com.pos.dao.ProductDAO;
 import com.pos.dao.TransactionDAO;
 import com.pos.model.*;
-import javafx.beans.property.SimpleDoubleProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -12,17 +10,16 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-
 import java.util.List;
 
 public class ReturnView {
     private final User currentUser;
     private final TransactionDAO transactionDAO = new TransactionDAO();
-    private final ProductDAO productDAO = new ProductDAO();
+    private final ObservableList<Transaction> transactions = FXCollections.observableArrayList();
     private final ObservableList<TransactionItem> foundItems = FXCollections.observableArrayList();
-    private Label infoLabel;
-    private Label messageLabel;
-    private Transaction foundTransaction;
+    private Label infoLabel, messageLabel;
+    private Button confirmBtn;
+    private Transaction selectedTransaction;
 
     public ReturnView(User user) {
         this.currentUser = user;
@@ -30,18 +27,38 @@ public class ReturnView {
 
     @SuppressWarnings("unchecked")
     public Node getView() {
-        TextField txnIdField = new TextField();
-        txnIdField.setPromptText("Transaction ID");
-        Button lookupBtn = new Button("Look Up");
+        Label txnLabel = new Label("Recent Sales");
+        txnLabel.setStyle("-fx-font-weight: bold;");
 
-        infoLabel = new Label("");
-        infoLabel.setWrapText(true);
+        TableView<Transaction> txnTable = new TableView<>(transactions);
+        txnTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        TableView<TransactionItem> table = new TableView<>(foundItems);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        TableColumn<Transaction, Integer> idCol = new TableColumn<>("Txn #");
+        idCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getId()).asObject());
 
-        TableColumn<TransactionItem, Integer> idCol = new TableColumn<>("Product ID");
-        idCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getProductId()).asObject());
+        TableColumn<Transaction, String> dateCol = new TableColumn<>("Date");
+        dateCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getCreatedAt()));
+
+        TableColumn<Transaction, String> empCol = new TableColumn<>("Employee");
+        empCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getEmployeeID()));
+
+        TableColumn<Transaction, String> payCol = new TableColumn<>("Payment");
+        payCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getPaymentMethod()));
+
+        TableColumn<Transaction, String> totalCol = new TableColumn<>("Total");
+        totalCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getTotal())));
+
+        txnTable.getColumns().addAll(idCol, dateCol, empCol, payCol, totalCol);
+
+        Label itemLabel = new Label("Items in Selected Transaction");
+        itemLabel.setStyle("-fx-font-weight: bold;");
+
+        TableView<TransactionItem> itemTable = new TableView<>(foundItems);
+        itemTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+        itemTable.setMaxHeight(160);
+
+        TableColumn<TransactionItem, Integer> pidCol = new TableColumn<>("Product ID");
+        pidCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getProductId()).asObject());
 
         TableColumn<TransactionItem, Integer> qtyCol = new TableColumn<>("Qty");
         qtyCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getQuantity()).asObject());
@@ -49,60 +66,64 @@ public class ReturnView {
         TableColumn<TransactionItem, String> priceCol = new TableColumn<>("Unit Price");
         priceCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getUnitPrice())));
 
-        TableColumn<TransactionItem, String> totalCol = new TableColumn<>("Line Total");
-        totalCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getLineTotal())));
+        TableColumn<TransactionItem, String> lineTotalCol = new TableColumn<>("Line Total");
+        lineTotalCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getLineTotal())));
 
-        table.getColumns().addAll(idCol, qtyCol, priceCol, totalCol);
+        itemTable.getColumns().addAll(pidCol, qtyCol, priceCol, lineTotalCol);
 
-        Button confirmBtn = new Button("Confirm Return");
+        infoLabel = new Label("Click a transaction above to select it.");
+        infoLabel.setWrapText(true);
+
+        confirmBtn = new Button("Confirm Return");
         confirmBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 20;");
         confirmBtn.setDisable(true);
+        confirmBtn.setOnAction(e -> processReturn());
 
         messageLabel = new Label("");
         messageLabel.setWrapText(true);
 
-        lookupBtn.setOnAction(e -> {
-            try {
-                int id = Integer.parseInt(txnIdField.getText().trim());
-                foundTransaction = transactionDAO.findById(id);
+        txnTable.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> {
+            if (selected != null) {
+                selectedTransaction = selected;
                 foundItems.clear();
-                if (foundTransaction == null || foundTransaction.getType().equals("RETURN")) {
-                    infoLabel.setText("Transaction not found or already returned.");
-                    confirmBtn.setDisable(true);
-                } else {
-                    List<TransactionItem> items = transactionDAO.getItemsByTransactionId(id);
-                    foundItems.addAll(items);
-                    infoLabel.setText(String.format("Transaction #%d  |  %s  |  Total: $%.2f",
-                        foundTransaction.getId(), foundTransaction.getPaymentMethod(), foundTransaction.getTotal()));
-                    confirmBtn.setDisable(false);
-                }
-            } catch (NumberFormatException ex) {
-                infoLabel.setText("Enter a valid transaction ID.");
+                foundItems.addAll(transactionDAO.getItemsByTransactionId(selected.getId()));
+                infoLabel.setText(String.format("Transaction #%d  |  %s  |  %s  |  Total: $%.2f",
+                    selected.getId(), selected.getCreatedAt(), selected.getPaymentMethod(), selected.getTotal()));
+                confirmBtn.setDisable(false);
+                messageLabel.setText("");
             }
         });
 
-        confirmBtn.setOnAction(e -> {
-            if (foundTransaction == null) return;
-            int returnId = transactionDAO.saveReturn(foundTransaction.getId(), currentUser.getEmployeeID());
-            if (returnId > 0) {
-                messageLabel.setStyle("-fx-text-fill: green;");
-                messageLabel.setText(String.format("Return complete! Return Transaction #%d  |  Refund: $%.2f",
-                    returnId, foundTransaction.getTotal()));
-                foundItems.clear();
-                infoLabel.setText("");
-                confirmBtn.setDisable(true);
-                foundTransaction = null;
-            } else {
-                messageLabel.setStyle("-fx-text-fill: red;");
-                messageLabel.setText("Return failed. Please try again.");
-            }
-        });
+        loadTransactions();
 
-        HBox lookupRow = new HBox(8, new Label("Transaction ID:"), txnIdField, lookupBtn);
-
-        VBox content = new VBox(12, lookupRow, infoLabel, table, confirmBtn, messageLabel);
-        content.setPadding(new Insets(20));
-        VBox.setVgrow(table, Priority.ALWAYS);
+        VBox content = new VBox(8, txnLabel, txnTable, itemLabel, itemTable, infoLabel, confirmBtn, messageLabel);
+        content.setPadding(new Insets(16));
+        VBox.setVgrow(txnTable, Priority.ALWAYS);
         return content;
+    }
+
+    private void loadTransactions() {
+        transactions.clear();
+        transactionDAO.findAll().stream()
+            .filter(t -> t.getType().equals("SALE") && !t.isReturned())
+            .forEach(transactions::add);
+    }
+
+    private void processReturn() {
+        if (selectedTransaction == null) return;
+        int returnId = transactionDAO.saveReturn(selectedTransaction.getId(), currentUser.getEmployeeID());
+        if (returnId > 0) {
+            messageLabel.setStyle("-fx-text-fill: green;");
+            messageLabel.setText(String.format("Return complete! Return Txn #%d  |  Refund: $%.2f",
+                returnId, selectedTransaction.getTotal()));
+            foundItems.clear();
+            infoLabel.setText("Click a transaction above to select it.");
+            confirmBtn.setDisable(true);
+            selectedTransaction = null;
+            loadTransactions();
+        } else {
+            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setText("Return failed. Please try again.");
+        }
     }
 }

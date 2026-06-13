@@ -91,6 +91,11 @@ public class TransactionDAO {
                 sStmt.setInt(1, item.getQuantity());
                 sStmt.setInt(2, item.getProductId());
                 sStmt.executeUpdate();
+
+                PreparedStatement markStmt = conn.prepareStatement(
+                    "UPDATE transactions SET returned = 1 WHERE id = ?");
+                markStmt.setInt(1, originalId);
+                markStmt.executeUpdate();
             }
 
             conn.createStatement().execute("COMMIT");
@@ -171,7 +176,8 @@ public class TransactionDAO {
             rs.getDouble("total"),
             rs.getDouble("amount_tendered"),
             rs.getDouble("change_given"),
-            rs.getString("created_at")
+            rs.getString("created_at"),
+            rs.getInt("returned") == 1
         );
     }
 }
