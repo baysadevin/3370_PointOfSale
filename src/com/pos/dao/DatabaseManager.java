@@ -52,7 +52,7 @@ public class DatabaseManager {
         "    role        TEXT    NOT NULL CHECK(role IN ('CASHIER','MANAGER','ADMIN'))," +
         "    active      INTEGER NOT NULL DEFAULT 1," +
         "    employeePin    TEXT    NOT NULL," +
-        "    created_at  TEXT    DEFAULT (datetime('now'))" +
+        "    created_at  TEXT    DEFAULT (datetime('now', 'localtime'))" +
         ");";
 
     private static final String CREATE_PRODUCTS =
@@ -78,7 +78,7 @@ public class DatabaseManager {
         "    amount_tendered REAL," +
         "    change_given    REAL," +
         "    returned        INTEGER NOT NULL DEFAULT 0," +
-        "    created_at      TEXT    DEFAULT (datetime('now'))," +
+        "    created_at      TEXT    DEFAULT (datetime('now', 'localtime'))," +
         "    FOREIGN KEY (employeeID) REFERENCES users(employeeID)" +
         ");";
 
