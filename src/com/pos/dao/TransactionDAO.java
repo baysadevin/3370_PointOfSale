@@ -24,8 +24,8 @@ public class TransactionDAO {
             stmt.setDouble(7, t.getChangeGiven());
             stmt.executeUpdate();
 
-            ResultSet rs = conn.createStatement().executeQuery("SELECT last_insert_rowid()");
-            int txnId = rs.next() ? rs.getInt(1) : -1;
+            ResultSet keys = conn.createStatement().executeQuery("SELECT last_insert_rowid()");
+            int txnId = keys.next() ? keys.getInt(1) : -1;
             if (txnId == -1) { conn.createStatement().execute("ROLLBACK"); return -1; }
 
             for (CartItem item : items) {
@@ -54,10 +54,15 @@ public class TransactionDAO {
         }
     }
 
-    public int saveReturn(int originalId, String employeeID) {
-        Transaction original = findById(originalId);
-        if (original == null) return -1;
-        List<TransactionItem> items = getItemsByTransactionId(originalId);
+    public int processPartialReturn(int originalTxnId, List<TransactionItem> selectedItems, String employeeID) {
+        Transaction original = findById(originalTxnId);
+        if (original == null || selectedItems.isEmpty()) return -1;
+
+        double subtotal = 0;
+        for (TransactionItem item : selectedItems) subtotal += item.getLineTotal();
+        subtotal = Math.round(subtotal * 100.0) / 100.0;
+        double tax = Math.round(subtotal * 0.06 * 100.0) / 100.0;
+        double total = Math.round((subtotal + tax) * 100.0) / 100.0;
 
         try {
             Connection conn = db.getConnection();
@@ -67,16 +72,16 @@ public class TransactionDAO {
                 "INSERT INTO transactions (employeeID, type, payment_method, subtotal, tax_amount, total) VALUES (?, 'RETURN', ?, ?, ?, ?)");
             stmt.setString(1, employeeID);
             stmt.setString(2, original.getPaymentMethod());
-            stmt.setDouble(3, original.getSubtotal());
-            stmt.setDouble(4, original.getTaxAmount());
-            stmt.setDouble(5, original.getTotal());
+            stmt.setDouble(3, subtotal);
+            stmt.setDouble(4, tax);
+            stmt.setDouble(5, total);
             stmt.executeUpdate();
 
             ResultSet rs = conn.createStatement().executeQuery("SELECT last_insert_rowid()");
             int returnId = rs.next() ? rs.getInt(1) : -1;
             if (returnId == -1) { conn.createStatement().execute("ROLLBACK"); return -1; }
 
-            for (TransactionItem item : items) {
+            for (TransactionItem item : selectedItems) {
                 PreparedStatement iStmt = conn.prepareStatement(
                     "INSERT INTO transaction_items (transaction_id, product_id, quantity, unit_price, line_total) VALUES (?, ?, ?, ?, ?)");
                 iStmt.setInt(1, returnId);
@@ -92,17 +97,42 @@ public class TransactionDAO {
                 sStmt.setInt(2, item.getProductId());
                 sStmt.executeUpdate();
 
+                PreparedStatement dStmt = conn.prepareStatement(
+                    "DELETE FROM transaction_items WHERE id = ?");
+                dStmt.setInt(1, item.getId());
+                dStmt.executeUpdate();
+            }
+
+            ResultSet remaining = conn.createStatement().executeQuery(
+                "SELECT COUNT(*) AS cnt FROM transaction_items WHERE transaction_id = " + originalTxnId);
+            int remainingCount = remaining.next() ? remaining.getInt("cnt") : 0;
+
+            if (remainingCount == 0) {
                 PreparedStatement markStmt = conn.prepareStatement(
                     "UPDATE transactions SET returned = 1 WHERE id = ?");
-                markStmt.setInt(1, originalId);
+                markStmt.setInt(1, originalTxnId);
                 markStmt.executeUpdate();
+            } else {
+                ResultSet totalsRs = conn.createStatement().executeQuery(
+                    "SELECT SUM(line_total) AS total FROM transaction_items WHERE transaction_id = " + originalTxnId);
+                double newSubtotal = totalsRs.next() ? Math.round(totalsRs.getDouble("total") * 100.0) / 100.0 : 0;
+                double newTax = Math.round(newSubtotal * 0.06 * 100.0) / 100.0;
+                double newTotal = Math.round((newSubtotal + newTax) * 100.0) / 100.0;
+
+                PreparedStatement updateStmt = conn.prepareStatement(
+                    "UPDATE transactions SET subtotal = ?, tax_amount = ?, total = ? WHERE id = ?");
+                updateStmt.setDouble(1, newSubtotal);
+                updateStmt.setDouble(2, newTax);
+                updateStmt.setDouble(3, newTotal);
+                updateStmt.setInt(4, originalTxnId);
+                updateStmt.executeUpdate();
             }
 
             conn.createStatement().execute("COMMIT");
             return returnId;
         } catch (SQLException e) {
             try { db.getConnection().createStatement().execute("ROLLBACK"); } catch (SQLException ex) {}
-            System.err.println("TransactionDAO.saveReturn: " + e.getMessage());
+            System.err.println("TransactionDAO.processPartialReturn: " + e.getMessage());
             return -1;
         }
     }
@@ -152,15 +182,31 @@ public class TransactionDAO {
         return list;
     }
 
-    public List<Transaction> findByType(String type) {
+    public List<Transaction> findWithFilters(String type, String startDate, String endDate) {
         List<Transaction> list = new ArrayList<>();
-        try (PreparedStatement stmt = db.getConnection().prepareStatement(
-                "SELECT * FROM transactions WHERE type = ? ORDER BY id DESC")) {
-            stmt.setString(1, type);
+        StringBuilder sql = new StringBuilder("SELECT * FROM transactions WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        if (type != null && !type.equals("ALL")) {
+            sql.append(" AND type = ?");
+            params.add(type);
+        }
+        if (startDate != null && !startDate.isEmpty()) {
+            sql.append(" AND date(created_at) >= date(?)");
+            params.add(startDate);
+        }
+        if (endDate != null && !endDate.isEmpty()) {
+            sql.append(" AND date(created_at) <= date(?)");
+            params.add(endDate);
+        }
+        sql.append(" ORDER BY id DESC");
+
+        try (PreparedStatement stmt = db.getConnection().prepareStatement(sql.toString())) {
+            for (int i = 0; i < params.size(); i++) stmt.setObject(i + 1, params.get(i));
             ResultSet rs = stmt.executeQuery();
             while (rs.next()) list.add(mapRow(rs));
         } catch (SQLException e) {
-            System.err.println("TransactionDAO.findByType: " + e.getMessage());
+            System.err.println("TransactionDAO.findWithFilters: " + e.getMessage());
         }
         return list;
     }

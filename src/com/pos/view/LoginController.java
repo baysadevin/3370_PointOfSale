@@ -17,10 +17,10 @@ public class LoginController {
     private Label messageLabel;
 
     public Scene getScene() {
-        Label title = new Label("Department Store POS");
+        Label title = new Label("Point Of Sale");
         title.setStyle("-fx-font-size: 22px; -fx-font-weight: bold;");
 
-        Label subtitle = new Label("Workstation 01");
+        Label subtitle = new Label("Login");
         subtitle.setStyle("-fx-font-size: 13px; -fx-text-fill: #888888;");
 
         employeeIDField = new TextField();
@@ -50,7 +50,7 @@ public class LoginController {
         root.setPadding(new Insets(60));
         root.setStyle("-fx-background-color: #f4f4f4;");
 
-        return new Scene(root, 900, 650);
+        return new Scene(root);
     }
 
     private void handleLogin() {
@@ -76,6 +76,10 @@ public class LoginController {
             Stage stage = (Stage) employeeIDField.getScene().getWindow();
             MainController main = new MainController(stage, user);
             stage.setScene(main.getScene());
+            javafx.application.Platform.runLater(() -> {
+                stage.setMaximized(false);
+                stage.setMaximized(true);
+            });
         }
     }
 

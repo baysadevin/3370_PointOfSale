@@ -14,6 +14,7 @@ public class Main extends Application {
         LoginController loginController = new LoginController();
         primaryStage.setTitle("POS System");
         primaryStage.setScene(loginController.getScene());
+        primaryStage.setMaximized(true);
         primaryStage.show();
     }
 

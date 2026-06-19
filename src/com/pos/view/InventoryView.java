@@ -7,6 +7,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -46,11 +47,11 @@ public class InventoryView {
 
         table.getColumns().addAll(idCol, barcodeCol, nameCol, priceCol, stockCol, threshCol, alertCol);
 
-        barcodeField    = new TextField(); barcodeField.setPromptText("Barcode");
-        nameField       = new TextField(); nameField.setPromptText("Name");
-        priceField      = new TextField(); priceField.setPromptText("Price");
-        stockField      = new TextField(); stockField.setPromptText("Stock");
-        thresholdField  = new TextField(); thresholdField.setPromptText("Threshold");
+        barcodeField   = new TextField(); barcodeField.setPromptText("e.g. 11001");
+        nameField      = new TextField(); nameField.setPromptText("e.g. T-Shirt");
+        priceField     = new TextField(); priceField.setPromptText("e.g. 19.99");
+        stockField     = new TextField(); stockField.setPromptText("e.g. 50");
+        thresholdField = new TextField(); thresholdField.setPromptText("e.g. 10");
 
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> {
             if (selected != null) {
@@ -62,9 +63,9 @@ public class InventoryView {
             }
         });
 
-        Button addBtn    = new Button("Add");
-        Button updateBtn = new Button("Update");
-        Button deleteBtn = new Button("Delete");
+        Button addBtn     = new Button("Add");
+        Button updateBtn  = new Button("Update");
+        Button deleteBtn  = new Button("Delete");
         Button refreshBtn = new Button("Refresh");
 
         addBtn.setOnAction(e -> addProduct());
@@ -75,8 +76,16 @@ public class InventoryView {
         messageLabel = new Label("");
         messageLabel.setWrapText(true);
 
-        HBox formRow = new HBox(8, barcodeField, nameField, priceField, stockField, thresholdField,
-                                addBtn, updateBtn, deleteBtn, refreshBtn);
+        HBox formRow = new HBox(8,
+            fieldBox("Barcode",    barcodeField),
+            fieldBox("Name",       nameField),
+            fieldBox("Price",      priceField),
+            fieldBox("Stock",      stockField),
+            fieldBox("Threshold",  thresholdField),
+            btnBox(addBtn),
+            btnBox(updateBtn),
+            btnBox(deleteBtn),
+            btnBox(refreshBtn));
         formRow.setPadding(new Insets(8, 0, 0, 0));
 
         VBox content = new VBox(8, table, formRow, messageLabel);
@@ -85,6 +94,18 @@ public class InventoryView {
 
         loadProducts();
         return content;
+    }
+
+    private VBox fieldBox(String label, TextField field) {
+        VBox box = new VBox(3, new Label(label), field);
+        box.setAlignment(Pos.TOP_LEFT);
+        return box;
+    }
+
+    private VBox btnBox(Button btn) {
+        VBox box = new VBox(3, new Label(""), btn);
+        box.setAlignment(Pos.TOP_LEFT);
+        return box;
     }
 
     private void loadProducts() {
@@ -136,15 +157,13 @@ public class InventoryView {
     }
 
     private Product buildProductFromForm(int id) {
-        return new Product(
-            id,
+        return new Product(id,
             barcodeField.getText().trim(),
             nameField.getText().trim(),
             Double.parseDouble(priceField.getText().trim()),
             Integer.parseInt(stockField.getText().trim()),
             Integer.parseInt(thresholdField.getText().trim()),
-            true
-        );
+            true);
     }
 
     private void clearForm() {

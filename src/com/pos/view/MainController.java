@@ -23,7 +23,7 @@ public class MainController {
         root = new BorderPane();
         root.setLeft(buildNav());
         showPOS();
-        return new Scene(root, 1280, 800);
+        return new Scene(root);
     }
 
     private VBox buildNav() {
@@ -78,5 +78,9 @@ public class MainController {
 
     private void logout() {
         stage.setScene(new LoginController().getScene());
+        javafx.application.Platform.runLater(() -> {
+            stage.setMaximized(false);
+            stage.setMaximized(true);
+        });
     }
 }

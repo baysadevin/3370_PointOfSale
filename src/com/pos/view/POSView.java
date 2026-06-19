@@ -11,7 +11,9 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+
 import java.util.ArrayList;
+import java.util.List;
 
 public class POSView {
     private final User currentUser;
@@ -21,7 +23,7 @@ public class POSView {
     private final ObservableList<Product> allProducts = FXCollections.observableArrayList();
     private final double TAX_RATE = 0.06;
 
-    private Label subtotalLabel, taxLabel, totalLabel, changeLabel, messageLabel;
+    private Label subtotalLabel, taxLabel, totalLabel, messageLabel;
     private TextField barcodeField, tenderedField, searchField;
     private ComboBox<String> paymentCombo;
     private TableView<Product> productTable;
@@ -38,7 +40,7 @@ public class POSView {
         searchField.textProperty().addListener((obs, old, val) -> filterProducts(val));
 
         productTable = new TableView<>(allProducts);
-        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
         productTable.setPrefWidth(220);
 
         TableColumn<Product, String> pNameCol = new TableColumn<>("Name");
@@ -81,7 +83,6 @@ public class POSView {
         taxLabel      = new Label("Tax (6%): $0.00");
         totalLabel    = new Label("Total:    $0.00");
         totalLabel.setStyle("-fx-font-weight: bold;");
-        changeLabel   = new Label("Change:   $0.00");
 
         paymentCombo = new ComboBox<>();
         paymentCombo.getItems().addAll("CASH", "CARD", "GIFT_CARD");
@@ -109,7 +110,6 @@ public class POSView {
             new Separator(),
             new Label("Payment Method:"), paymentCombo,
             new Label("Amount Tendered:"), tenderedField,
-            changeLabel,
             new Separator(),
             processBtn, clearBtn, messageLabel);
         right.setPadding(new Insets(8));
@@ -141,7 +141,7 @@ public class POSView {
     @SuppressWarnings("unchecked")
     private TableView<CartItem> buildCartTable() {
         TableView<CartItem> table = new TableView<>(cartItems);
-        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+        table.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
         TableColumn<CartItem, String> nameCol = new TableColumn<>("Product");
         nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().getProduct().getName()));
@@ -207,7 +207,6 @@ public class POSView {
             catch (NumberFormatException e) { showMessage("Enter a valid tendered amount.", true); return; }
             if (tendered < total) { showMessage("Insufficient payment.", true); return; }
             change = Math.round(Math.round((tendered - total) / 0.05) * 0.05 * 100.0) / 100.0;
-            changeLabel.setText(String.format("Change:   $%.2f", change));
         }
 
         Transaction t = new Transaction(0, currentUser.getEmployeeID(), "SALE",
@@ -228,7 +227,6 @@ public class POSView {
         subtotalLabel.setText("Subtotal: $0.00");
         taxLabel.setText("Tax (6%): $0.00");
         totalLabel.setText("Total:    $0.00");
-        changeLabel.setText("Change:   $0.00");
         tenderedField.clear();
         barcodeField.clear();
     }

@@ -7,10 +7,10 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.geometry.Insets;
+import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
-
 
 public class AdminView {
     private final UserDAO userDAO = new UserDAO();
@@ -45,6 +45,15 @@ public class AdminView {
 
         table.getColumns().addAll(idCol, empCol, firstCol, lastCol, roleCol, activeCol);
 
+        empIDField     = new TextField(); empIDField.setPromptText("e.g. 006");
+        firstNameField = new TextField(); firstNameField.setPromptText("e.g. John");
+        lastNameField  = new TextField(); lastNameField.setPromptText("e.g. Smith");
+        pinField       = new TextField(); pinField.setPromptText("4-digit PIN");
+
+        roleCombo = new ComboBox<>();
+        roleCombo.getItems().addAll("CASHIER", "MANAGER", "ADMIN");
+        roleCombo.setValue("CASHIER");
+
         table.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> {
             if (selected != null) {
                 empIDField.setText(selected.getEmployeeID());
@@ -54,15 +63,6 @@ public class AdminView {
                 roleCombo.setValue(selected.getRole());
             }
         });
-
-        empIDField    = new TextField(); empIDField.setPromptText("Employee ID");
-        firstNameField = new TextField(); firstNameField.setPromptText("First Name");
-        lastNameField  = new TextField(); lastNameField.setPromptText("Last Name");
-        pinField      = new TextField(); pinField.setPromptText("4-digit PIN");
-
-        roleCombo = new ComboBox<>();
-        roleCombo.getItems().addAll("CASHIER", "MANAGER", "ADMIN");
-        roleCombo.setValue("CASHIER");
 
         Button addBtn    = new Button("Add User");
         Button updateBtn = new Button("Update User");
@@ -76,8 +76,14 @@ public class AdminView {
         messageLabel.setWrapText(true);
 
         HBox formRow = new HBox(8,
-            empIDField, firstNameField, lastNameField,
-            pinField, roleCombo, addBtn, updateBtn, clearBtn);
+            fieldBox("Employee ID",  empIDField),
+            fieldBox("First Name",   firstNameField),
+            fieldBox("Last Name",    lastNameField),
+            fieldBox("PIN",          pinField),
+            comboBox("Role",         roleCombo),
+            btnBox(addBtn),
+            btnBox(updateBtn),
+            btnBox(clearBtn));
         formRow.setPadding(new Insets(8, 0, 0, 0));
 
         VBox content = new VBox(8, table, formRow, messageLabel);
@@ -86,6 +92,24 @@ public class AdminView {
 
         loadUsers();
         return content;
+    }
+
+    private VBox fieldBox(String label, TextField field) {
+        VBox box = new VBox(3, new Label(label), field);
+        box.setAlignment(Pos.TOP_LEFT);
+        return box;
+    }
+
+    private VBox comboBox(String label, ComboBox<?> combo) {
+        VBox box = new VBox(3, new Label(label), combo);
+        box.setAlignment(Pos.TOP_LEFT);
+        return box;
+    }
+
+    private VBox btnBox(Button btn) {
+        VBox box = new VBox(3, new Label(""), btn);
+        box.setAlignment(Pos.TOP_LEFT);
+        return box;
     }
 
     private void loadUsers() {
@@ -102,9 +126,8 @@ public class AdminView {
                 roleCombo.getValue(),
                 true,
                 pinField.getText().trim());
-
             if (userDAO.create(u)) {
-                showMessage("User added successfully.", false);
+                showMessage("User added.", false);
                 clearForm();
                 loadUsers();
             } else {
@@ -118,12 +141,10 @@ public class AdminView {
     private void updateUser() {
         User selected = table.getSelectionModel().getSelectedItem();
         if (selected == null) { showMessage("Select a user to update.", true); return; }
-
         selected.setFirstName(firstNameField.getText().trim());
         selected.setLastName(lastNameField.getText().trim());
         selected.setRole(roleCombo.getValue());
         selected.setEmployeePin(pinField.getText().trim());
-
         if (userDAO.update(selected)) {
             showMessage("User updated.", false);
             loadUsers();

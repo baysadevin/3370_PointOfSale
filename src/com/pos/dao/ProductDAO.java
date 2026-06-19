@@ -8,6 +8,18 @@ import java.util.List;
 public class ProductDAO {
     private final DatabaseManager db = DatabaseManager.getInstance();
 
+    public Product findById(int id) {
+        String sql = "SELECT * FROM products WHERE id = ?";
+        try (PreparedStatement stmt = db.getConnection().prepareStatement(sql)) {
+            stmt.setInt(1, id);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) return mapRow(rs);
+        } catch (SQLException e) {
+            System.err.println("ProductDAO.findById: " + e.getMessage());
+        }
+        return null;
+    }
+
     public Product findByBarcode(String barcode) {
         String sql = "SELECT * FROM products WHERE barcode = ? AND active = 1";
         try (PreparedStatement stmt = db.getConnection().prepareStatement(sql)) {
@@ -22,9 +34,8 @@ public class ProductDAO {
 
     public List<Product> findAll() {
         List<Product> list = new ArrayList<>();
-        String sql = "SELECT * FROM products WHERE active = 1";
         try (Statement stmt = db.getConnection().createStatement()) {
-            ResultSet rs = stmt.executeQuery(sql);
+            ResultSet rs = stmt.executeQuery("SELECT * FROM products WHERE active = 1");
             while (rs.next()) list.add(mapRow(rs));
         } catch (SQLException e) {
             System.err.println("ProductDAO.findAll: " + e.getMessage());

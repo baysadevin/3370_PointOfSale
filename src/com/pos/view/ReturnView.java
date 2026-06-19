@@ -1,5 +1,6 @@
 package com.pos.view;
 
+import com.pos.dao.ProductDAO;
 import com.pos.dao.TransactionDAO;
 import com.pos.model.*;
 import javafx.beans.property.SimpleIntegerProperty;
@@ -10,15 +11,30 @@ import javafx.geometry.Insets;
 import javafx.scene.Node;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
+import java.util.List;
+import java.util.stream.Collectors;
 
 public class ReturnView {
     private final User currentUser;
     private final TransactionDAO transactionDAO = new TransactionDAO();
+    private final ProductDAO productDAO = new ProductDAO();
     private final ObservableList<Transaction> transactions = FXCollections.observableArrayList();
-    private final ObservableList<TransactionItem> foundItems = FXCollections.observableArrayList();
+    private final ObservableList<ItemRow> foundItems = FXCollections.observableArrayList();
     private Label infoLabel, messageLabel;
     private Button confirmBtn;
     private Transaction selectedTransaction;
+    private TableView<ItemRow> itemTable;
+
+    private static class ItemRow {
+        final TransactionItem item;
+        final String productName;
+        final String barcode;
+        ItemRow(TransactionItem item, String name, String barcode) {
+            this.item = item;
+            this.productName = name;
+            this.barcode = barcode;
+        }
+    }
 
     public ReturnView(User user) {
         this.currentUser = user;
@@ -26,7 +42,7 @@ public class ReturnView {
 
     @SuppressWarnings("unchecked")
     public Node getView() {
-        Label txnLabel = new Label("Recent Sales");
+        Label txnLabel = new Label("Recent Sales — click to select");
         txnLabel.setStyle("-fx-font-weight: bold;");
 
         TableView<Transaction> txnTable = new TableView<>(transactions);
@@ -49,31 +65,35 @@ public class ReturnView {
 
         txnTable.getColumns().addAll(idCol, dateCol, empCol, payCol, totalCol);
 
-        Label itemLabel = new Label("Items in Selected Transaction");
+        Label itemLabel = new Label("Items — Ctrl+click to select multiple");
         itemLabel.setStyle("-fx-font-weight: bold;");
 
-        TableView<TransactionItem> itemTable = new TableView<>(foundItems);
+        itemTable = new TableView<>(foundItems);
         itemTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
-        itemTable.setMaxHeight(160);
+        itemTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        itemTable.setMaxHeight(180);
 
-        TableColumn<TransactionItem, Integer> pidCol = new TableColumn<>("Product ID");
-        pidCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getProductId()).asObject());
+        TableColumn<ItemRow, String> nameCol = new TableColumn<>("Product");
+        nameCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().productName));
 
-        TableColumn<TransactionItem, Integer> qtyCol = new TableColumn<>("Qty");
-        qtyCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().getQuantity()).asObject());
+        TableColumn<ItemRow, String> barcodeCol = new TableColumn<>("Barcode");
+        barcodeCol.setCellValueFactory(d -> new SimpleStringProperty(d.getValue().barcode));
 
-        TableColumn<TransactionItem, String> priceCol = new TableColumn<>("Unit Price");
-        priceCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getUnitPrice())));
+        TableColumn<ItemRow, Integer> qtyCol = new TableColumn<>("Qty");
+        qtyCol.setCellValueFactory(d -> new SimpleIntegerProperty(d.getValue().item.getQuantity()).asObject());
 
-        TableColumn<TransactionItem, String> lineTotalCol = new TableColumn<>("Line Total");
-        lineTotalCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().getLineTotal())));
+        TableColumn<ItemRow, String> priceCol = new TableColumn<>("Unit Price");
+        priceCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().item.getUnitPrice())));
 
-        itemTable.getColumns().addAll(pidCol, qtyCol, priceCol, lineTotalCol);
+        TableColumn<ItemRow, String> lineTotalCol = new TableColumn<>("Line Total");
+        lineTotalCol.setCellValueFactory(d -> new SimpleStringProperty(String.format("$%.2f", d.getValue().item.getLineTotal())));
 
-        infoLabel = new Label("Click a transaction above to select it.");
+        itemTable.getColumns().addAll(nameCol, barcodeCol, qtyCol, priceCol, lineTotalCol);
+
+        infoLabel = new Label("Click a transaction above to see its items.");
         infoLabel.setWrapText(true);
 
-        confirmBtn = new Button("Confirm Return");
+        confirmBtn = new Button("Return Selected Items");
         confirmBtn.setStyle("-fx-background-color: #e67e22; -fx-text-fill: white; -fx-font-size: 13px; -fx-padding: 8 20;");
         confirmBtn.setDisable(true);
         confirmBtn.setOnAction(e -> processReturn());
@@ -85,7 +105,13 @@ public class ReturnView {
             if (selected != null) {
                 selectedTransaction = selected;
                 foundItems.clear();
-                foundItems.addAll(transactionDAO.getItemsByTransactionId(selected.getId()));
+                List<TransactionItem> items = transactionDAO.getItemsByTransactionId(selected.getId());
+                for (TransactionItem item : items) {
+                    Product p = productDAO.findById(item.getProductId());
+                    String name    = p != null ? p.getName()    : "Unknown";
+                    String barcode = p != null ? p.getBarcode() : "N/A";
+                    foundItems.add(new ItemRow(item, name, barcode));
+                }
                 infoLabel.setText(String.format("Transaction #%d  |  %s  |  %s  |  Total: $%.2f",
                     selected.getId(), selected.getCreatedAt(), selected.getPaymentMethod(), selected.getTotal()));
                 confirmBtn.setDisable(false);
@@ -110,13 +136,28 @@ public class ReturnView {
 
     private void processReturn() {
         if (selectedTransaction == null) return;
-        int returnId = transactionDAO.saveReturn(selectedTransaction.getId(), currentUser.getEmployeeID());
+
+        List<TransactionItem> selectedItems = itemTable.getSelectionModel()
+            .getSelectedItems().stream()
+            .map(row -> row.item)
+            .collect(Collectors.toList());
+
+        if (selectedItems.isEmpty()) {
+            messageLabel.setStyle("-fx-text-fill: red;");
+            messageLabel.setText("Select at least one item to return.");
+            return;
+        }
+
+        double refundSubtotal = selectedItems.stream().mapToDouble(TransactionItem::getLineTotal).sum();
+        refundSubtotal = Math.round(refundSubtotal * 100.0) / 100.0;
+        double refundTotal = Math.round((refundSubtotal + Math.round(refundSubtotal * 0.06 * 100.0) / 100.0) * 100.0) / 100.0;
+
+        int returnId = transactionDAO.processPartialReturn(selectedTransaction.getId(), selectedItems, currentUser.getEmployeeID());
         if (returnId > 0) {
             messageLabel.setStyle("-fx-text-fill: green;");
-            messageLabel.setText(String.format("Return complete! Return Txn #%d  |  Refund: $%.2f",
-                returnId, selectedTransaction.getTotal()));
+            messageLabel.setText(String.format("Return complete! Return Txn #%d  |  Refund: $%.2f", returnId, refundTotal));
             foundItems.clear();
-            infoLabel.setText("Click a transaction above to select it.");
+            infoLabel.setText("Click a transaction above to see its items.");
             confirmBtn.setDisable(true);
             selectedTransaction = null;
             loadTransactions();

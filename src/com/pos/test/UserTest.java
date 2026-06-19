@@ -12,8 +12,8 @@ public class UserTest {
 
     @BeforeEach
     public void setUp() {
-        activeUser   = new User(1, "EMP-001", "John", "Doe",   "CASHIER", true,  "1234");
-        inactiveUser = new User(2, "EMP-002", "Jane", "Smith", "MANAGER", false, "5678");
+        activeUser   = new User(1, "001", "John", "Doe",   "CASHIER", true,  "1234");
+        inactiveUser = new User(2, "002", "Jane", "Smith", "MANAGER", false, "5678");
     }
 
     // Test 1: getFullName() concatenates first and last name correctly
